@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orden de Servicio - PickupPlus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        .vehicle-option input:checked + div {
+            border-color: #009ee3;
+            background-color: #f0f9ff;
+            box-shadow: 0 0 0 2px #009ee3;
+        }
+
+        /* Ajustes para el PDF de Ticket */
+        .thermal-pdf-layout {
+            width: 80mm !important;
+            padding: 4mm !important;
+            margin: 0 !important;
+        }
+        .thermal-pdf-layout .details-grid { display: block !important; }
+        .thermal-pdf-layout * { font-size: 9pt !important; }
+        .thermal-pdf-layout h2 { font-size: 12pt !important; }
+        .thermal-pdf-layout #logo-preview-print { max-height: 1.5cm !important; }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #009ee3;
+            border-radius: 50%;
+            width: 20px; height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block; vertical-align: middle; margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8">
+
+    <div id="main-card" class="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+        
+        <div id="form-container">
+            <div class="bg-[#009ee3] p-8 text-white relative">
+                <h1 class="text-2xl font-black uppercase tracking-tighter">Orden de Servicio</h1>
+                <p class="text-sky-100 text-xs font-bold uppercase tracking-widest mt-1">PickupPlus México</p>
+                <div class="mt-4">
+                    <input type="file" id="logo-input" accept="image/*" class="hidden">
+                    <button onclick="document.getElementById('logo-input').click()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] uppercase font-bold py-2 px-4 rounded-full border border-white/30 transition-all">
+                        Subir Logo
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 px-8 py-3 flex justify-between items-center text-white">
+                <span class="text-slate-400 text-[10px] font-bold uppercase">Procesado por Mercado Pago</span>
+                <span class="text-sky-400 font-bold text-sm">$20.00 MXN</span>
+            </div>
+
+            <form id="transportForm" class="p-8 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <label class="block text-[10px] font-bold text-sky-600 uppercase tracking-wider">Información del Cliente</label>
+                        <input type="text" name="empresa" placeholder="Empresa" required class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500">
+                        <input type="text" name="nombre" placeholder="Nombre Pasajero" required class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500">
+                        <input type="text" name="vuelo" placeholder="No. Vuelo (Opcional)" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <div class="space-y-4">
+                        <label class="block text-[10px] font-bold text-sky-600 uppercase tracking-wider">Logística</label>
+                        <input type="datetime-local" name="fecha" required class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none">
+                        <input type="text" name="origen" placeholder="Punto de Origen" required class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500">
+                        <input type="text" name="destino" placeholder="Destino Final" required class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <div class="space-y-4">
+                        <label class="block text-[10px] font-bold text-sky-600 uppercase tracking-wider">Unidad y Conductor</label>
+                        <input type="text" name="conductor" placeholder="Nombre Conductor" required class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" name="placas" placeholder="Placas" required class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none">
+                            <input type="text" name="color" placeholder="Color" required class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none">
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <label class="block text-[10px] font-bold text-sky-600 uppercase tracking-wider">Finanzas</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-3.5 text-slate-400 font-bold">$</span>
+                            <input type="number" step="0.01" name="balance" placeholder="Balance por Cobrar" required class="w-full pl-8 pr-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-sky-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-3">Tipo de Vehículo</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <label class="vehicle-option cursor-pointer"><input type="radio" name="vehiculo" value="Sedán" class="hidden" checked><div class="border p-3 rounded-xl text-center font-bold text-xs uppercase">Sedán</div></label>
+                        <label class="vehicle-option cursor-pointer"><input type="radio" name="vehiculo" value="Van" class="hidden"><div class="border p-3 rounded-xl text-center font-bold text-xs uppercase">Van</div></label>
+                        <label class="vehicle-option cursor-pointer"><input type="radio" name="vehiculo" value="SUV" class="hidden"><div class="border p-3 rounded-xl text-center font-bold text-xs uppercase">SUV</div></label>
+                        <label class="vehicle-option cursor-pointer"><input type="radio" name="vehiculo" value="VIP" class="hidden"><div class="border p-3 rounded-xl text-center font-bold text-xs uppercase">VIP</div></label>
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-button" class="w-full bg-[#009ee3] text-white font-bold py-4 rounded-xl shadow-lg transition-all">
+                    Pagar y Generar Orden
+                </button>
+            </form>
+        </div>
+
+        <div id="print-area" class="hidden p-8 space-y-6 bg-white">
+            <div id="logo-print-container" class="flex justify-center mb-4 hidden">
+                <img id="logo-preview-print" src="" alt="Logo" style="max-height: 120px;">
+            </div>
+
+            <div class="flex justify-between items-start border-b-2 border-slate-100 pb-6">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1" id="p-empresa"></p>
+                    <h2 class="text-lg font-black text-slate-900 uppercase">Orden de Transporte</h2>
+                </div>
+                <div class="text-right">
+                    <p class="text-slate-500 text-[11px] font-bold uppercase" id="p-id"></p>
+                    <p class="text-[10px] text-slate-400" id="p-date"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-x-12 gap-y-8 text-[12px] details-grid">
+                <div class="space-y-5">
+                    <div><p class="text-[10px] font-bold text-sky-500 uppercase">Pasajero</p><p class="font-bold text-slate-800 text-base" id="p-nombre"></p></div>
+                    <div><p class="text-[10px] font-bold text-sky-500 uppercase">Ruta</p><p class="text-slate-800" id="p-ruta"></p></div>
+                    <div><p class="text-[10px] font-bold text-sky-500 uppercase">Unidad</p><p class="text-slate-800 font-bold" id="p-unidad"></p></div>
+                </div>
+                <div class="space-y-5">
+                    <div><p class="text-[10px] font-bold text-sky-500 uppercase">Fecha y Hora</p><p class="font-bold text-slate-800 text-base" id="p-fecha"></p></div>
+                    <div><p class="text-[10px] font-bold text-sky-500 uppercase">Conductor</p><p class="font-bold text-slate-800 text-base" id="p-conductor"></p></div>
+                    <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                        <p class="text-[10px] font-bold text-amber-600 uppercase">Balance por Cobrar</p>
+                        <p class="text-2xl font-black text-amber-700" id="p-balance"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-8 rounded-3xl flex flex-col items-center justify-center space-y-4 border border-slate-100">
+                <div id="qrcode"></div>
+                <p class="text-[11px] font-bold text-slate-600 uppercase">Pago Confirmado vía Mercado Pago</p>
+            </div>
+            
+            <div class="pt-6 border-t border-slate-100 text-center">
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">PickupPlus México • Transacción Segura</p>
+            </div>
+        </div>
+
+        <div id="action-buttons" class="hidden p-8 bg-slate-50 space-y-3">
+            <button onclick="descargarPDF('carta')" class="w-full bg-sky-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg">
+                Descargar PDF (Formato Carta)
+            </button>
+            <button onclick="descargarPDF('ticket')" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg">
+                Descargar PDF (Formato Ticket 80mm)
+            </button>
+            <button onclick="location.reload()" class="w-full text-slate-400 font-bold py-2 hover:text-slate-600 transition-colors">Crear Nueva Orden</button>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('transportForm');
+        let currentOrderID = "";
+
+        // Manejo de Logo
+        document.getElementById('logo-input').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('logo-preview-print').src = event.target.result;
+                document.getElementById('logo-print-container').classList.remove('hidden');
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-button');
+            btn.innerHTML = `<span class="loader"></span> Procesando Pago...`;
+            btn.disabled = true;
+
+            window.open("https://mpago.la/2WY5xxn", '_blank');
+
+            setTimeout(() => {
+                const data = new FormData(form);
+                currentOrderID = Math.random().toString(36).substr(2, 9).toUpperCase();
+
+                // Llenar datos en el área de impresión
+                document.getElementById('p-empresa').innerText = data.get('empresa');
+                document.getElementById('p-id').innerText = "ID: #" + currentOrderID;
+                document.getElementById('p-date').innerText = new Date().toLocaleDateString();
+                document.getElementById('p-nombre').innerText = data.get('nombre');
+                document.getElementById('p-ruta').innerHTML = `<b>DE:</b> ${data.get('origen')}<br><b>A:</b> ${data.get('destino')}`;
+                document.getElementById('p-fecha').innerText = data.get('fecha').replace('T', ' ');
+                document.getElementById('p-conductor').innerText = data.get('conductor');
+                document.getElementById('p-unidad').innerHTML = `<b>${data.get('vehiculo')}</b><br>Placas: ${data.get('placas')} | Color: ${data.get('color')}`;
+                document.getElementById('p-balance').innerText = `$${parseFloat(data.get('balance')).toFixed(2)} MXN`;
+
+                // Generar QR
+                document.getElementById('qrcode').innerHTML = "";
+                new QRCode(document.getElementById("qrcode"), {
+                    text: `ID:${currentOrderID}|PAGO:OK`,
+                    width: 140, height: 140
+                });
+
+                // Cambiar Vistas
+                document.getElementById('form-container').classList.add('hidden');
+                document.getElementById('print-area').classList.remove('hidden');
+                document.getElementById('action-buttons').classList.remove('hidden');
+                window.scrollTo(0,0);
+            }, 3000);
+        });
+
+        function descargarPDF(tipo) {
+            const element = document.getElementById('print-area');
+            let opciones = {};
+
+            if(tipo === 'carta') {
+                opciones = {
+                    margin: 10,
+                    filename: `Orden_${currentOrderID}_Carta.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' }
+                };
+            } else {
+                element.classList.add('thermal-pdf-layout');
+                opciones = {
+                    margin: 0,
+                    filename: `Ticket_${currentOrderID}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: [80, 250], orientation: 'portrait' }
+                };
+            }
+
+            html2pdf().set(opciones).from(element).save().then(() => {
+                element.classList.remove('thermal-pdf-layout');
+            });
+        }
+    </script>
+</body>
+</html>
